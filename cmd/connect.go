@@ -27,7 +27,7 @@ var connectCmd = &cobra.Command{
 
 		var server config.Server
 		for i, s := range conf.Servers {
-			if i == index || server.Name == name {
+			if i == index || s.Name == name {
 				server = s
 				break
 			}
