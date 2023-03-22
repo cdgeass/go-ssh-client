@@ -82,18 +82,18 @@ func connect(server config.Server) {
 	defer terminal.Restore(fd, oldState)
 
 	// Request pseudo terminal
-	width, height, err := terminal.GetSize(fd)
+	width, height, err := terminal.GetSize(int(os.Stdout.Fd()))
 	if err := session.RequestPty("xterm", height, width, modes); err != nil {
-		log.Fatal("request for pseudo terminal failed: ", err)
+		log.Fatal("Request for pseudo terminal failed: ", err)
 		return
 	}
 
 	// Start remote shell
 	if err := session.Shell(); err != nil {
-		log.Fatal("failed to start shell: ", err)
+		log.Fatal("Failed to start shell: ", err)
 	}
 
 	if err := session.Wait(); err != nil {
-		log.Fatal("failed to wait: ", err)
+		log.Fatal("Failed to wait: ", err)
 	}
 }
