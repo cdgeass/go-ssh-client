@@ -2,12 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"runtime"
+
 	"github.com/cdgeass/ssh-client/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
-	"log"
-	"os"
+	"golang.org/x/sys/windows"
+	"golang.org/x/term"
 )
 
 func init() {
@@ -75,14 +78,21 @@ func connect(server config.Server) {
 	}
 
 	fd := int(os.Stdin.Fd())
-	oldState, err := terminal.MakeRaw(fd)
+
+	sysType := runtime.GOOS
+	if sysType == "windows" {
+		// Set windows.ENABLE_VIRTUAL_TERMINAL_INPUT
+		setConsoleMode(fd)
+	}
+
+	oldState, err := term.MakeRaw(fd)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-	defer terminal.Restore(fd, oldState)
+	defer term.Restore(fd, oldState)
 
 	// Request pseudo terminal
-	width, height, err := terminal.GetSize(int(os.Stdout.Fd()))
+	width, height, _ := term.GetSize(int(os.Stdout.Fd()))
 	if err := session.RequestPty("xterm", height, width, modes); err != nil {
 		log.Fatal("Request for pseudo terminal failed: ", err)
 		return
@@ -95,5 +105,18 @@ func connect(server config.Server) {
 
 	if err := session.Wait(); err != nil {
 		log.Fatal("Failed to wait: ", err)
+	}
+}
+
+func setConsoleMode(fd int) {
+	var st uint32
+	if err := windows.GetConsoleMode(windows.Handle(fd), &st); err != nil {
+		log.Fatal("Failed to set console mode: ", err)
+		return
+	}
+	raw := st | windows.ENABLE_VIRTUAL_TERMINAL_INPUT
+	if err := windows.SetConsoleMode(windows.Handle(fd), raw); err != nil {
+		log.Fatal("Failed to set console mode: ", err)
+		return
 	}
 }
